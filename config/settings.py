@@ -32,6 +32,7 @@ INSTALLED_APPS = [
     'apps.citas',
     'apps.notificaciones',
     'apps.reportes',
+    'apps.recetas',
 ]
 
 MIDDLEWARE = [
@@ -108,6 +109,10 @@ LANGUAGE_CODE = 'es-co'
 TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
+
+# ── Email (desarrollo: consola) ────────────────────────────
+EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
+DEFAULT_FROM_EMAIL = 'noreply@citasmedicas.com'
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

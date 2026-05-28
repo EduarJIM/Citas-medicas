@@ -1,9 +1,35 @@
 * { margin: 0; padding: 0; box-sizing: border-box; }
 
+:root {
+  --bg-body: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #f0f2f5 100%);
+  --bg-card: #fff;
+  --bg-card-hover: #fff;
+  --text-primary: #333;
+  --text-secondary: #666;
+  --border-color: #d0d0d0;
+  --border-light: #f0f0f0;
+  --bg-table-header: #f8faff;
+  --bg-input: #fff;
+  --shadow-card: 0 1px 4px rgba(0,0,0,0.06);
+}
+
+[data-theme="dark"] {
+  --bg-body: #121212;
+  --bg-card: #1e1e1e;
+  --bg-card-hover: #2a2a2a;
+  --text-primary: #e0e0e0;
+  --text-secondary: #aaa;
+  --border-color: #444;
+  --border-light: #333;
+  --bg-table-header: #2a2a2a;
+  --bg-input: #2a2a2a;
+  --shadow-card: 0 1px 4px rgba(0,0,0,0.3);
+}
+
 body {
   font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
-  background: linear-gradient(135deg, #f0f4ff 0%, #e8f0fe 50%, #f0f2f5 100%);
-  color: #333;
+  background: var(--bg-body);
+  color: var(--text-primary);
   line-height: 1.6;
   min-height: 100vh;
   -webkit-text-size-adjust: 100%;
@@ -15,7 +41,7 @@ body {
   padding: 2rem 1rem;
 }
 
-.loading { text-align: center; padding: 4rem; font-size: 1.2rem; color: #666; }
+.loading { text-align: center; padding: 4rem; font-size: 1.2rem; color: var(--text-secondary); }
 
 /* ── Animaciones ────────────────────────── */
 @keyframes fadeInUp {
@@ -120,7 +146,7 @@ body {
 }
 
 .auth-card {
-  background: #fff;
+  background: var(--bg-card);
   padding: 2.5rem;
   border-radius: 16px;
   box-shadow: 0 4px 24px rgba(0,0,0,0.08);
@@ -166,6 +192,13 @@ body {
   color: #1a3a6b;
 }
 
+[data-theme="dark"] .hero-text h1 { color: #90caf9; }
+[data-theme="dark"] .hero-section { background: linear-gradient(135deg, #1a237e, #0d1b3e); }
+[data-theme="dark"] .auth-card h2 { color: #90caf9; }
+[data-theme="dark"] .auth-footer a { color: #90caf9; }
+[data-theme="dark"] .agendar-horario.selected,
+[data-theme="dark"] .agendar-dia.active { background: #1a73e8; border-color: #1a73e8; color: #fff; }
+
 /* ── Forms ──────────────────────────────── */
 .form { max-width: 500px; margin: 0 auto; animation: fadeInUp 0.5s ease-out; }
 
@@ -181,9 +214,11 @@ body {
 .form-group input, .form-group select, .form-group textarea {
   width: 100%;
   padding: 0.65rem;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--border-color);
   border-radius: 8px;
   font-size: 1rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
   transition: border-color 0.2s, box-shadow 0.2s;
 }
 
@@ -253,10 +288,10 @@ body {
 }
 
 .card {
-  background: #fff;
+  background: var(--bg-card);
   padding: 1.5rem;
   border-radius: 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-card);
   transition: transform 0.25s, box-shadow 0.25s;
 }
 
@@ -268,7 +303,7 @@ body {
 .card .btn { margin-top: 0.5rem; }
 
 .card h3 { margin-bottom: 0.3rem; font-size: 1.05rem; }
-.card p { color: #666; margin-bottom: 0.8rem; font-size: 0.9rem; }
+.card p { color: var(--text-secondary); margin-bottom: 0.8rem; font-size: 0.9rem; }
 
 /* ── Card icons ─────────────────────────── */
 .card-icon {
@@ -292,30 +327,31 @@ body {
   width: 100%;
   border-collapse: separate;
   border-spacing: 0;
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 12px;
   overflow: hidden;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-card);
 }
 
 .table th, .table td {
   padding: 0.75rem 1rem;
   text-align: left;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
   font-size: 0.9rem;
+  color: var(--text-primary);
 }
 
 .table th {
-  background: #f8faff;
+  background: var(--bg-table-header);
   font-weight: 600;
-  color: #555;
+  color: var(--text-secondary);
 }
 
 .table tbody tr {
   transition: background 0.2s;
 }
 
-.table tbody tr:hover { background: #f8faff; }
+.table tbody tr:hover { background: var(--bg-table-header); }
 
 .table tbody tr:last-child td { border-bottom: none; }
 
@@ -344,12 +380,14 @@ body {
 
 .filters select {
   padding: 0.45rem;
-  border: 1px solid #d0d0d0;
+  border: 1px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.9rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
 }
 
-.empty { text-align: center; padding: 3rem; color: #888; }
+.empty { text-align: center; padding: 3rem; color: var(--text-secondary); }
 
 /* ── Page container ─────────────────────── */
 .page-container { max-width: 900px; width: 100%; margin: 0 auto; }
@@ -360,7 +398,7 @@ body {
   display: flex;
   gap: 0;
   margin-bottom: 1.5rem;
-  border-bottom: 2px solid #e0e0e0;
+  border-bottom: 2px solid var(--border-color);
 }
 
 .tab {
@@ -369,7 +407,7 @@ body {
   background: none;
   cursor: pointer;
   font-size: 0.95rem;
-  color: #666;
+  color: var(--text-secondary);
   border-bottom: 2px solid transparent;
   margin-bottom: -2px;
   transition: color 0.2s, border-color 0.2s;
@@ -390,19 +428,19 @@ body {
 }
 
 .agendar-card {
-  background: #fff;
+  background: var(--bg-card);
   border-radius: 16px;
-  box-shadow: 0 1px 4px rgba(0,0,0,0.06);
+  box-shadow: var(--shadow-card);
   padding: 1.5rem;
   animation: fadeInUp 0.4s ease-out;
 }
 
 .agendar-card h2 {
   font-size: 1.1rem;
-  color: #1a3a6b;
+  color: var(--text-primary);
   margin-bottom: 1rem;
   padding-bottom: 0.5rem;
-  border-bottom: 1px solid #f0f0f0;
+  border-bottom: 1px solid var(--border-light);
 }
 
 .agendar-row {
@@ -419,7 +457,7 @@ body {
   display: block;
   font-size: 0.75rem;
   font-weight: 600;
-  color: #666;
+  color: var(--text-secondary);
   text-transform: uppercase;
   letter-spacing: 0.5px;
   margin-bottom: 0.25rem;
@@ -428,10 +466,11 @@ body {
 .agendar-field select {
   width: 100%;
   padding: 0.45rem 0.6rem;
-  border: 1.5px solid #d0d0d0;
+  border: 1.5px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.88rem;
-  background: #fff;
+  background: var(--bg-input);
+  color: var(--text-primary);
   transition: border-color 0.15s, box-shadow 0.15s;
 }
 
@@ -455,12 +494,12 @@ body {
   align-items: center;
   gap: 0.1rem;
   padding: 0.4rem 0.7rem;
-  border: 1.5px solid #e0e0e0;
+  border: 1.5px solid var(--border-color);
   border-radius: 8px;
-  background: #fff;
+  background: var(--bg-card);
   cursor: pointer;
   font-size: 0.72rem;
-  color: #555;
+  color: var(--text-secondary);
   transition: all 0.15s ease;
   min-width: 52px;
 }
@@ -496,20 +535,20 @@ body {
 
 .agendar-horario {
   padding: 0.3rem 0.7rem;
-  border: 1.5px solid #e0e0e0;
+  border: 1.5px solid var(--border-color);
   border-radius: 6px;
-  background: #fff;
+  background: var(--bg-card);
   cursor: pointer;
   font-size: 0.82rem;
   font-weight: 500;
-  color: #444;
+  color: var(--text-primary);
   transition: all 0.15s ease;
 }
 
 .agendar-horario:hover {
   border-color: #1a73e8;
   color: #1a73e8;
-  background: #f0f6ff;
+  background: var(--bg-table-header);
 }
 
 .agendar-horario.selected {
@@ -528,15 +567,17 @@ body {
   gap: 0.5rem;
   align-items: center;
   padding-top: 0.75rem;
-  border-top: 1px solid #f0f0f0;
+  border-top: 1px solid var(--border-light);
 }
 
 .agendar-motivo {
   flex: 1;
   padding: 0.5rem 0.65rem;
-  border: 1.5px solid #d0d0d0;
+  border: 1.5px solid var(--border-color);
   border-radius: 6px;
   font-size: 0.85rem;
+  background: var(--bg-input);
+  color: var(--text-primary);
   transition: border-color 0.15s;
 }
 
@@ -554,7 +595,7 @@ body {
 .agendar-loading {
   padding: 0.75rem;
   text-align: center;
-  color: #999;
+  color: var(--text-secondary);
   font-size: 0.82rem;
 }
 
@@ -600,7 +641,7 @@ body {
 }
 
 .loading-medical p {
-  color: #666;
+  color: var(--text-secondary);
   font-size: 0.9rem;
   animation: crossPulse 1.5s ease-in-out infinite;
 }
@@ -630,6 +671,119 @@ body {
   width: 40px;
   height: 14px;
 }
+
+/* ── Theme Toggle ────────────────────────── */
+.theme-toggle {
+  background: none;
+  border: 1px solid rgba(255,255,255,0.4);
+  color: #fff;
+  padding: 0.2rem 0.4rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 1rem;
+  line-height: 1;
+  transition: background 0.2s;
+}
+.theme-toggle:hover { background: rgba(255,255,255,0.15); }
+
+/* ── Calendar view (Mis Citas) ──────────── */
+.calendar-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+.calendar-header h3 { color: var(--text-primary); }
+.calendar-nav {
+  background: none;
+  border: 1px solid var(--border-color);
+  color: var(--text-primary);
+  padding: 0.3rem 0.7rem;
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.9rem;
+}
+.calendar-nav:hover { background: var(--bg-table-header); }
+.calendar-grid {
+  display: grid;
+  grid-template-columns: repeat(7, 1fr);
+  gap: 0.25rem;
+  margin-bottom: 1rem;
+}
+.calendar-weekday {
+  text-align: center;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--text-secondary);
+  padding: 0.3rem 0;
+}
+.calendar-day {
+  text-align: center;
+  padding: 0.4rem;
+  border-radius: 8px;
+  font-size: 0.85rem;
+  cursor: default;
+  color: var(--text-primary);
+  min-height: 36px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+}
+.calendar-day.other-month { color: var(--text-secondary); opacity: 0.4; }
+.calendar-day.today { background: rgba(26,115,232,0.12); font-weight: 600; }
+.calendar-day.has-citas {
+  background: #e8f0fe;
+  color: #1a73e8;
+  font-weight: 600;
+  cursor: pointer;
+}
+.calendar-day.has-citas:hover { background: #d2e3fc; }
+[data-theme="dark"] .calendar-day.has-citas { background: rgba(26,115,232,0.25); color: #90caf9; }
+[data-theme="dark"] .calendar-day.has-citas:hover { background: rgba(26,115,232,0.4); }
+.calendar-day.selected {
+  background: #1a73e8;
+  color: #fff;
+}
+[data-theme="dark"] .calendar-day.selected { background: #1a73e8; color: #fff; }
+.calendar-day-dot {
+  width: 4px;
+  height: 4px;
+  border-radius: 50%;
+  background: #1a73e8;
+  margin-top: 2px;
+}
+[data-theme="dark"] .calendar-day-dot { background: #90caf9; }
+.calendar-day-citas { margin-bottom: 1.5rem; }
+.calendar-day-citas h4 { margin-bottom: 0.75rem; color: var(--text-primary); }
+.calendar-cita-card {
+  background: var(--bg-card);
+  border: 1px solid var(--border-light);
+  border-radius: 10px;
+  padding: 0.75rem 1rem;
+  margin-bottom: 0.5rem;
+  box-shadow: var(--shadow-card);
+}
+.calendar-cita-card p { margin: 0; font-size: 0.85rem; color: var(--text-primary); }
+.calendar-cita-card .label { color: var(--text-secondary); font-size: 0.75rem; }
+
+.vista-toggle {
+  margin-bottom: 1rem;
+  display: flex;
+  gap: 0.5rem;
+}
+.vista-btn {
+  padding: 0.35rem 1rem;
+  border: 1px solid var(--border-color);
+  background: var(--bg-card);
+  color: var(--text-primary);
+  border-radius: 6px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  transition: background 0.2s;
+}
+.vista-btn.active { background: #1a73e8; color: #fff; border-color: #1a73e8; }
+.vista-btn:not(.active):hover { background: var(--bg-table-header); }
 
 /* ── Responsive ─────────────────────────── */
 @media (hover: none) and (pointer: coarse) {

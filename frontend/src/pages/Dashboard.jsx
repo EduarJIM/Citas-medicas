@@ -12,7 +12,7 @@ export default function Dashboard() {
 
   useEffect(() => {
     api.get('/citas/', { params: { estado: 'pendiente' } })
-      .then((res) => setNextCitas(res.data.slice(0, 5)))
+      .then((res) => setNextCitas(res.data.results.slice(0, 5)))
       .catch(() => {})
       .finally(() => setLoading(false));
   }, []);

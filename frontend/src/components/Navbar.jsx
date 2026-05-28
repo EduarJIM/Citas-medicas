@@ -1,5 +1,6 @@
 import { Link, useNavigate } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
+import ThemeToggle from './ThemeToggle';
 
 export default function Navbar() {
   const { user, logout } = useAuth();
@@ -26,7 +27,11 @@ export default function Navbar() {
           <Link to="/">Inicio</Link>
           <Link to="/agendar">Agendar Cita</Link>
           <Link to="/mis-citas">Mis Citas</Link>
+          <Link to="/mis-recetas">Mis Recetas</Link>
+          {user.rol === 'medico' && <Link to="/mis-pacientes">Mis Pacientes</Link>}
           {user.rol === 'admin' && <Link to="/admin">Admin</Link>}
+          <Link to="/perfil">Mi Perfil</Link>
+          <ThemeToggle />
           <span className="nav-user">{user.nombre_completo || user.correo}</span>
           <button onClick={handleLogout} className="btn-link">Cerrar sesión</button>
         </div>

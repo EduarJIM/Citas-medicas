@@ -10,6 +10,7 @@ class EstadoCitaSerializer(serializers.ModelSerializer):
 
 class CitaSerializer(serializers.ModelSerializer):
     paciente_nombre = serializers.CharField(source='id_paciente.nombre_completo', read_only=True)
+    paciente_telefono = serializers.CharField(source='id_paciente.telefono', read_only=True)
     medico_nombre = serializers.SerializerMethodField()
     especialidad = serializers.SerializerMethodField()
     estado = serializers.CharField(source='id_estado.nombre', read_only=True)
@@ -20,7 +21,7 @@ class CitaSerializer(serializers.ModelSerializer):
     class Meta:
         model = Cita
         fields = (
-            'id_cita', 'id_paciente', 'paciente_nombre', 'id_horario',
+            'id_cita', 'id_paciente', 'paciente_nombre', 'paciente_telefono', 'id_horario',
             'fecha', 'hora_inicio', 'hora_fin', 'medico_nombre',
             'especialidad', 'id_estado', 'estado', 'motivo',
             'fecha_creacion', 'cancelada_por', 'fecha_cancelacion'

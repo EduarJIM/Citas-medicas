@@ -24,6 +24,7 @@ urlpatterns = [
     path('api/', include('apps.citas.urls')),
     path('api/', include('apps.notificaciones.urls')),
     path('api/', include('apps.reportes.urls')),
+    path('api/', include('apps.recetas.urls')),
     path('api/token/', TokenObtainPairView.as_view(), name='token_obtain_pair'),
     path('api/token/refresh/', TokenRefreshView.as_view(), name='token_refresh'),
     # Swagger

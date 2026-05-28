@@ -1,3 +1,5 @@
+from django.conf import settings
+from django.core.mail import send_mail
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -19,6 +21,16 @@ def notificacion_list_create(request):
         serializer = NotificacionSerializer(data=request.data)
         if serializer.is_valid():
             serializer.save()
+            try:
+                send_mail(
+                    subject=serializer.validated_data['titulo'],
+                    message=serializer.validated_data['mensaje'],
+                    from_email=settings.DEFAULT_FROM_EMAIL,
+                    recipient_list=[request.user.correo],
+                    fail_silently=True,
+                )
+            except Exception:
+                pass
             return Response(serializer.data, status=status.HTTP_201_CREATED)
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 

@@ -1,4 +1,6 @@
 from datetime import timedelta
+from django.conf import settings
+from django.core.mail import send_mail
 from django.utils import timezone
 from django.db import IntegrityError, transaction
 from rest_framework import status
@@ -7,6 +9,8 @@ from rest_framework.response import Response
 from .models import Cita, EstadoCita, AuditoriaCita
 from .serializers import CitaSerializer, CrearCitaSerializer, CancelarCitaSerializer
 from apps.horarios.models import Horario
+from apps.medicos.models import Medico
+from apps.notificaciones.models import Notificacion
 
 
 def _get_estado(nombre):
@@ -78,7 +82,42 @@ def cita_list_create(request):
                 return Response({'error': 'Este horario ya fue reservado por otro paciente'},
                                 status=status.HTTP_409_CONFLICT)
 
+        try:
+            Notificacion.objects.create(
+                id_usuario=request.user,
+                titulo='Cita agendada exitosamente',
+                mensaje=f'Tu cita con el médico {horario.id_medico.id_usuario.nombre_completo} '
+                        f'ha sido agendada para el {horario.fecha} a las {horario.hora_inicio}.',
+            )
+            send_mail(
+                subject='Cita agendada exitosamente',
+                message=f'Tu cita con el médico {horario.id_medico.id_usuario.nombre_completo} '
+                        f'ha sido agendada para el {horario.fecha} a las {horario.hora_inicio}.',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[request.user.correo],
+                fail_silently=True,
+            )
+        except Exception:
+            pass
+
         return Response(CitaSerializer(cita).data, status=status.HTTP_201_CREATED)
+
+
+@api_view(['GET'])
+def mis_pacientes(request):
+    try:
+        medico = Medico.objects.get(pk=request.user.id_usuario)
+    except Medico.DoesNotExist:
+        return Response({'error': 'Solo los médicos pueden acceder'}, status=status.HTTP_403_FORBIDDEN)
+
+    queryset = Cita.objects.select_related(
+        'id_paciente', 'id_horario', 'id_estado'
+    ).filter(
+        id_horario__id_medico=medico,
+        id_horario__fecha=timezone.now().date()
+    ).order_by('id_horario__hora_inicio')
+
+    return Response(CitaSerializer(queryset, many=True).data)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])
@@ -158,6 +197,57 @@ def atender_cita(request, pk):
         actor_id_usuario=request.user,
         detalle=request.data.get('notas', ''),
     )
+    try:
+        mensaje_notif = 'Tu cita fue atendida exitosamente.' if evento == 'realizada' else 'No asististe a tu cita.'
+        Notificacion.objects.create(
+            id_usuario=cita.id_paciente,
+            titulo='Cita atendida' if evento == 'realizada' else 'No asistió',
+            mensaje=mensaje_notif,
+        )
+        send_mail(
+            subject='Cita atendida' if evento == 'realizada' else 'No asistió',
+            message=mensaje_notif,
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[cita.id_paciente.correo],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
+
+    return Response(CitaSerializer(cita).data)
+
+
+@api_view(['PATCH'])
+def confirmar_cita(request, pk):
+    try:
+        cita = Cita.objects.select_related('id_horario__id_medico', 'id_estado').get(pk=pk)
+    except Cita.DoesNotExist:
+        return Response({'error': 'Cita no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+    medico = cita.id_horario.id_medico
+    if request.user.id_usuario != medico.id_medico_id and not request.user.is_superuser:
+        return Response({'error': 'Solo el médico asignado puede confirmar esta cita'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    if cita.id_estado.nombre != 'pendiente':
+        return Response({'error': f'No se puede confirmar una cita {cita.id_estado.nombre}'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    estado_confirmada = EstadoCita.objects.get_or_create(nombre='confirmada')[0]
+    cita.id_estado = estado_confirmada
+    cita.save(update_fields=['id_estado'])
+
+    Notificacion.objects.create(
+        id_usuario=cita.id_paciente,
+        titulo='Cita Confirmada',
+        mensaje=f'Tu cita del {cita.id_horario.fecha} a las {cita.id_horario.hora_inicio} ha sido confirmada por el médico.'
+    )
+
+    AuditoriaCita.objects.create(
+        id_cita=cita, evento='confirmada',
+        actor_id_usuario=request.user,
+    )
+
     return Response(CitaSerializer(cita).data)
 
 
@@ -182,6 +272,27 @@ def eliminar_cita(request, pk):
         cita.delete()
 
     return Response({'mensaje': 'Cita eliminada permanentemente'})
+
+
+@api_view(['GET'])
+def historial_paciente(request, pk):
+    if not request.user.is_superuser and request.user.id_usuario != pk:
+        return Response({'error': 'No tienes permiso'}, status=status.HTTP_403_FORBIDDEN)
+
+    from apps.users.models import Usuario
+    try:
+        paciente = Usuario.objects.get(pk=pk)
+    except Usuario.DoesNotExist:
+        return Response({'error': 'Paciente no encontrado'}, status=status.HTTP_404_NOT_FOUND)
+
+    citas = Cita.objects.select_related(
+        'id_horario', 'id_horario__id_medico__id_medico', 'id_estado'
+    ).filter(id_paciente=pk).order_by('-id_horario__fecha', '-id_horario__hora_inicio')
+
+    return Response({
+        'paciente_nombre': paciente.nombre_completo,
+        'citas': CitaSerializer(citas, many=True).data,
+    })
 
 
 def cancelar_cita(request, cita):
@@ -226,5 +337,23 @@ def cancelar_cita(request, cita):
             id_cita=cita, evento='cancelada',
             actor_id_usuario=request.user,
         )
+
+    try:
+        Notificacion.objects.create(
+            id_usuario=cita.id_paciente,
+            titulo='Cita cancelada',
+            mensaje=f'Tu cita del {cita.id_horario.fecha} a las {cita.id_horario.hora_inicio} '
+                    f'ha sido cancelada ({cancelada_por}).',
+        )
+        send_mail(
+            subject='Cita cancelada',
+            message=f'Tu cita del {cita.id_horario.fecha} a las {cita.id_horario.hora_inicio} '
+                    f'ha sido cancelada ({cancelada_por}).',
+            from_email=settings.DEFAULT_FROM_EMAIL,
+            recipient_list=[cita.id_paciente.correo],
+            fail_silently=True,
+        )
+    except Exception:
+        pass
 
     return Response({'mensaje': 'Cita cancelada correctamente'})

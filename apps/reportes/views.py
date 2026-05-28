@@ -1,4 +1,6 @@
+import csv
 from django.db.models import Count, Q
+from django.http import HttpResponse
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
 from rest_framework import status
@@ -66,3 +68,30 @@ def reporte_tasa_no_asistencia(request):
         })
 
     return Response(data)
+
+
+@api_view(['GET'])
+def exportar_reportes(request, formato):
+    if not request.user.is_superuser:
+        return Response({'error': 'Solo administradores'}, status=status.HTTP_403_FORBIDDEN)
+
+    if formato == 'csv':
+        response = HttpResponse(content_type='text/csv')
+        response['Content-Disposition'] = 'attachment; filename="reporte_citas.csv"'
+        writer = csv.writer(response)
+        writer.writerow(['ID', 'Paciente', 'Medico', 'Fecha', 'Hora', 'Estado', 'Motivo'])
+
+        citas = Cita.objects.select_related('id_paciente', 'id_horario__id_medico__id_medico', 'id_estado').all()
+        for c in citas:
+            writer.writerow([
+                c.id_cita,
+                c.id_paciente.nombre_completo,
+                c.id_horario.id_medico.id_medico.nombre_completo,
+                c.id_horario.fecha,
+                c.id_horario.hora_inicio,
+                c.id_estado.nombre,
+                c.motivo,
+            ])
+        return response
+
+    return Response({'error': 'Formato no soportado. Use "csv".'}, status=status.HTTP_400_BAD_REQUEST)

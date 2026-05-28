@@ -2,6 +2,24 @@ import { useEffect, useState } from 'react';
 import api from '../api/axios';
 import LoadingSpinner from '../components/LoadingSpinner';
 
+const exportarCSV = async () => {
+  try {
+    const token = localStorage.getItem('access_token');
+    const resp = await fetch('http://127.0.0.1:8000/api/reportes/exportar/csv/', {
+      headers: { 'Authorization': `Bearer ${token}` }
+    });
+    const blob = await resp.blob();
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement('a');
+    a.href = url;
+    a.download = 'reporte_citas.csv';
+    a.click();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert('Error al exportar');
+  }
+};
+
 export default function AdminPanel() {
   const [tab, setTab] = useState('medicos');
   const [medicos, setMedicos] = useState([]);
@@ -15,8 +33,8 @@ export default function AdminPanel() {
       api.get('/medicos/'),
       api.get('/especialidades/')
     ]).then(([m, e]) => {
-      setMedicos(m.data);
-      setEspecialidades(e.data);
+      setMedicos(m.data.results);
+      setEspecialidades(e.data.results);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 
@@ -74,6 +92,9 @@ export default function AdminPanel() {
 
       {tab === 'reportes' && (
         <div>
+          <button onClick={exportarCSV} className="btn btn-primary btn-sm" style={{marginBottom:'1rem'}}>
+            Exportar CSV
+          </button>
           <h2>Citas por Especialidad</h2>
           <table className="table">
             <thead><tr><th>Especialidad</th><th>Total</th><th>Realizadas</th><th>Canceladas</th></tr></thead>
