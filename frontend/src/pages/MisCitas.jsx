@@ -1,17 +1,22 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function MisCitas() {
   const [citas, setCitas] = useState([]);
   const [filtro, setFiltro] = useState('');
+  const [loading, setLoading] = useState(true);
 
   const cargar = () => {
+    setLoading(true);
     const params = {};
     if (filtro) params.estado = filtro;
-    api.get('/citas/', { params }).then((r) => setCitas(r.data)).catch(() => {});
+    api.get('/citas/', { params }).then((r) => setCitas(r.data)).catch(() => {}).finally(() => setLoading(false));
   };
 
   useEffect(() => { cargar(); }, [filtro]);
+
+  if (loading) return <LoadingSpinner text="Cargando citas..." />;
 
   const cancelar = async (id) => {
     if (!confirm('¿Cancelar esta cita?')) return;
@@ -20,6 +25,16 @@ export default function MisCitas() {
       cargar();
     } catch (err) {
       alert(err.response?.data?.error || 'Error al cancelar');
+    }
+  };
+
+  const eliminar = async (id) => {
+    if (!confirm('¿Eliminar permanentemente esta cita? Esta acción no se puede deshacer.')) return;
+    try {
+      await api.delete(`/citas/${id}/eliminar/`);
+      cargar();
+    } catch (err) {
+      alert(err.response?.data?.error || 'Error al eliminar');
     }
   };
 
@@ -64,6 +79,11 @@ export default function MisCitas() {
                   {c.estado === 'pendiente' && (
                     <button onClick={() => cancelar(c.id_cita)} className="btn btn-danger btn-sm">
                       Cancelar
+                    </button>
+                  )}
+                  {c.estado !== 'pendiente' && (
+                    <button onClick={() => eliminar(c.id_cita)} className="btn btn-secondary btn-sm">
+                      Eliminar
                     </button>
                   )}
                 </td>

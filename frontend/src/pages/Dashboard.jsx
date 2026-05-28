@@ -2,48 +2,68 @@ import { useEffect, useState } from 'react';
 import { Link } from 'react-router-dom';
 import api from '../api/axios';
 import { useAuth } from '../context/AuthContext';
+import logoMedico from '../assets/logo-medical.svg';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function Dashboard() {
   const { user } = useAuth();
   const [nextCitas, setNextCitas] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
     api.get('/citas/', { params: { estado: 'pendiente' } })
       .then((res) => setNextCitas(res.data.slice(0, 5)))
-      .catch(() => {});
+      .catch(() => {})
+      .finally(() => setLoading(false));
   }, []);
 
-  return (
-    <div className="dashboard">
-      <h1>Bienvenido, {user?.nombre_completo || user?.correo}</h1>
-      <p className="rol-badge">{user?.rol}</p>
+  if (loading) return <LoadingSpinner text="Cargando dashboard..." />;
 
-      <div className="dashboard-grid">
-        <div className="card">
+  return (
+    <div className="dashboard fade-in">
+      <div className="hero-section">
+        <img src={logoMedico} alt="Citas Medicas" className="hero-logo pulse" />
+        <div className="hero-text">
+          <h1>Bienvenido, {user?.nombre_completo || user?.correo}</h1>
+          <p className="rol-badge">{user?.rol === 'admin' ? 'Administrador' : user?.rol === 'medico' ? 'Medico' : 'Paciente'}</p>
+        </div>
+      </div>
+
+      <div className="dashboard-grid slide-up">
+        <div className="card card-hover">
+          <div className="card-icon card-icon-blue">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><rect x="3" y="4" width="18" height="18" rx="2"/><path d="M16 2v4M8 2v4M3 10h18"/></svg>
+          </div>
           <h3>Agendar Cita</h3>
           <p>Reserva una cita con un especialista</p>
           <Link to="/agendar" className="btn btn-primary">Agendar</Link>
         </div>
-        <div className="card">
+        <div className="card card-hover">
+          <div className="card-icon card-icon-green">
+            <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><path d="M9 5H7a2 2 0 00-2 2v12a2 2 0 002 2h10a2 2 0 002-2V7a2 2 0 00-2-2h-2"/><rect x="9" y="3" width="6" height="4" rx="1"/><path d="M9 14l2 2 4-4"/></svg>
+          </div>
           <h3>Mis Citas</h3>
           <p>Consulta tus citas programadas</p>
           <Link to="/mis-citas" className="btn btn-secondary">Ver citas</Link>
         </div>
         {user?.rol === 'admin' && (
-          <div className="card">
-            <h3>Administración</h3>
-            <p>Gestiona usuarios, médicos y reportes</p>
+          <div className="card card-hover">
+            <div className="card-icon card-icon-purple">
+              <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2"><circle cx="12" cy="12" r="3"/><path d="M19.4 15a1.65 1.65 0 00.33 1.82l.06.06a2 2 0 010 2.83 2 2 0 01-2.83 0l-.06-.06a1.65 1.65 0 00-1.82-.33 1.65 1.65 0 00-1 1.51V21a2 2 0 01-4 0v-.09A1.65 1.65 0 009 19.4a1.65 1.65 0 00-1.82.33l-.06.06a2 2 0 01-2.83-2.83l.06-.06A1.65 1.65 0 004.68 15a1.65 1.65 0 00-1.51-1H3a2 2 0 010-4h.09A1.65 1.65 0 004.6 9a1.65 1.65 0 00-.33-1.82l-.06-.06a2 2 0 012.83-2.83l.06.06A1.65 1.65 0 009 4.68a1.65 1.65 0 001-1.51V3a2 2 0 014 0v.09a1.65 1.65 0 001 1.51 1.65 1.65 0 001.82-.33l.06-.06a2 2 0 012.83 2.83l-.06.06A1.65 1.65 0 0019.4 9a1.65 1.65 0 001.51 1H21a2 2 0 010 4h-.09a1.65 1.65 0 00-1.51 1z"/></svg>
+            </div>
+            <h3>Administracion</h3>
+            <p>Gestiona usuarios, medicos y reportes</p>
             <Link to="/admin" className="btn btn-secondary">Panel</Link>
           </div>
         )}
       </div>
 
       {nextCitas.length > 0 && (
-        <div className="next-citas">
-          <h2>Próximas Citas</h2>
+        <div className="next-citas slide-up">
+          <h2>Proximas Citas</h2>
           <table className="table">
             <thead>
-              <tr><th>Fecha</th><th>Hora</th><th>Médico</th><th>Estado</th></tr>
+              <tr><th>Fecha</th><th>Hora</th><th>Medico</th><th>Estado</th></tr>
             </thead>
             <tbody>
               {nextCitas.map((c) => (

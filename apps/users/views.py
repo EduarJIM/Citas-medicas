@@ -7,7 +7,7 @@ from rest_framework.response import Response
 from rest_framework_simplejwt.tokens import RefreshToken
 from .models import Usuario, Paciente, TokenRecuperacion, Rol
 from .serializers import (
-    RegistroSerializer, LoginSerializer, UsuarioSerializer,
+    RegistroSerializer, UsuarioSerializer,
     PacienteSerializer, PasswordResetRequestSerializer,
     PasswordResetConfirmSerializer
 )

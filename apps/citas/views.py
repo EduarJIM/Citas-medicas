@@ -9,6 +9,13 @@ from .serializers import CitaSerializer, CrearCitaSerializer, CancelarCitaSerial
 from apps.horarios.models import Horario
 
 
+def _get_estado(nombre):
+    try:
+        return EstadoCita.objects.get(nombre=nombre)
+    except EstadoCita.DoesNotExist:
+        return None
+
+
 @api_view(['GET', 'POST'])
 def cita_list_create(request):
     if request.method == 'GET':
@@ -46,12 +53,17 @@ def cita_list_create(request):
         except Horario.DoesNotExist:
             return Response({'error': 'Horario no disponible'}, status=status.HTTP_409_CONFLICT)
 
+        estado_pendiente = _get_estado('pendiente')
+        if not estado_pendiente:
+            return Response({'error': 'Error de configuración: estado pendiente no encontrado'},
+                            status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
         with transaction.atomic():
             try:
                 cita = Cita.objects.create(
                     id_paciente=request.user,
                     id_horario=horario,
-                    id_estado=EstadoCita.objects.get(nombre='pendiente'),
+                    id_estado=estado_pendiente,
                     motivo=serializer.validated_data.get('motivo', ''),
                 )
                 horario.disponible = False
@@ -127,14 +139,17 @@ def atender_cita(request, pk):
 
     accion = request.data.get('accion', 'realizada')
     if accion == 'realizada':
-        nuevo_estado = EstadoCita.objects.get(nombre='realizada')
+        nuevo_estado = _get_estado('realizada')
         evento = 'realizada'
     elif accion == 'no_asistio':
-        nuevo_estado = EstadoCita.objects.get(nombre='no_asistio')
+        nuevo_estado = _get_estado('no_asistio')
         evento = 'no_asistio'
     else:
         return Response({'error': 'Acción inválida. Use "realizada" o "no_asistio".'},
                         status=status.HTTP_400_BAD_REQUEST)
+    if not nuevo_estado:
+        return Response({'error': f'Error de configuración: estado {evento} no encontrado'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
 
     cita.id_estado = nuevo_estado
     cita.save(update_fields=['id_estado'])
@@ -144,6 +159,29 @@ def atender_cita(request, pk):
         detalle=request.data.get('notas', ''),
     )
     return Response(CitaSerializer(cita).data)
+
+
+@api_view(['DELETE'])
+def eliminar_cita(request, pk):
+    try:
+        cita = Cita.objects.get(pk=pk)
+    except Cita.DoesNotExist:
+        return Response({'error': 'Cita no encontrada'}, status=status.HTTP_404_NOT_FOUND)
+
+    if not request.user.is_superuser and cita.id_paciente != request.user:
+        return Response({'error': 'No tienes permiso para eliminar esta cita'},
+                        status=status.HTTP_403_FORBIDDEN)
+
+    if cita.id_estado.nombre == 'pendiente':
+        return Response({'error': 'Debes cancelar la cita antes de eliminarla'},
+                        status=status.HTTP_400_BAD_REQUEST)
+
+    with transaction.atomic():
+        cita.id_horario.disponible = True
+        cita.id_horario.save(update_fields=['disponible'])
+        cita.delete()
+
+    return Response({'mensaje': 'Cita eliminada permanentemente'})
 
 
 def cancelar_cita(request, cita):
@@ -172,8 +210,13 @@ def cancelar_cita(request, cita):
     elif es_medico:
         cancelada_por = 'medico'
 
+    estado_cancelada = _get_estado('cancelada')
+    if not estado_cancelada:
+        return Response({'error': 'Error de configuración: estado cancelada no encontrado'},
+                        status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
     with transaction.atomic():
-        cita.id_estado = EstadoCita.objects.get(nombre='cancelada')
+        cita.id_estado = estado_cancelada
         cita.cancelada_por = cancelada_por
         cita.fecha_cancelacion = ahora
         cita.save(update_fields=['id_estado', 'cancelada_por', 'fecha_cancelacion'])

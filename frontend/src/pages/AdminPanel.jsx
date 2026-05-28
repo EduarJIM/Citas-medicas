@@ -1,5 +1,6 @@
 import { useEffect, useState } from 'react';
 import api from '../api/axios';
+import LoadingSpinner from '../components/LoadingSpinner';
 
 export default function AdminPanel() {
   const [tab, setTab] = useState('medicos');
@@ -7,11 +8,19 @@ export default function AdminPanel() {
   const [especialidades, setEspecialidades] = useState([]);
   const [reporteEsp, setReporteEsp] = useState([]);
   const [reporteNoAsistencia, setReporteNoAsistencia] = useState([]);
+  const [loading, setLoading] = useState(true);
 
   useEffect(() => {
-    api.get('/medicos/').then((r) => setMedicos(r.data)).catch(() => {});
-    api.get('/especialidades/').then((r) => setEspecialidades(r.data)).catch(() => {});
+    Promise.all([
+      api.get('/medicos/'),
+      api.get('/especialidades/')
+    ]).then(([m, e]) => {
+      setMedicos(m.data);
+      setEspecialidades(e.data);
+    }).catch(() => {}).finally(() => setLoading(false));
   }, []);
+
+  if (loading) return <LoadingSpinner text="Cargando panel..." />;
 
   const cargarReportes = () => {
     api.get('/reportes/citas-por-especialidad/').then((r) => setReporteEsp(r.data)).catch(() => {});

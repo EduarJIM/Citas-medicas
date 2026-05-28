@@ -15,7 +15,13 @@ export default function Navbar() {
   return (
     <nav className="navbar">
       <div className="nav-container">
-        <Link to="/" className="nav-brand">Citas Médicas</Link>
+        <Link to="/" className="nav-brand">
+          <svg className="nav-brand-icon" viewBox="0 0 24 24" fill="none" stroke="white" strokeWidth="2.5">
+            <rect x="8" y="3" width="8" height="18" rx="2"/>
+            <rect x="3" y="8" width="18" height="8" rx="2"/>
+          </svg>
+          Citas Medicas
+        </Link>
         <div className="nav-links">
           <Link to="/">Inicio</Link>
           <Link to="/agendar">Agendar Cita</Link>

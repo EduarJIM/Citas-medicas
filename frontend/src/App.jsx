@@ -7,10 +7,11 @@ import Dashboard from './pages/Dashboard';
 import AgendarCita from './pages/AgendarCita';
 import MisCitas from './pages/MisCitas';
 import AdminPanel from './pages/AdminPanel';
+import LoadingSpinner from './components/LoadingSpinner';
 
 function ProtectedRoute({ children }) {
   const { user, loading } = useAuth();
-  if (loading) return <div className="loading">Cargando...</div>;
+  if (loading) return <LoadingSpinner />;
   return user ? children : <Navigate to="/login" />;
 }
 
