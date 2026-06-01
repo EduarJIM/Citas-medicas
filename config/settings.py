@@ -120,8 +120,16 @@ if 'smtp' in EMAIL_BACKEND:
     EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
     EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
 
-# ── Frontend URL para enlaces en correos ────────────────────
-FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
+# ── URLs públicas para enlaces en correos ───────────────────
+# Usa la IP/localhost de la máquina donde corre el servidor
+import socket
+PUBLIC_URL = config('PUBLIC_URL', default='')
+if not PUBLIC_URL:
+    hostname = socket.gethostname()
+    local_ip = socket.gethostbyname(hostname)
+    PUBLIC_URL = f'http://{local_ip}:8000'
+
+FRONTEND_URL = config('FRONTEND_URL', default=PUBLIC_URL)
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

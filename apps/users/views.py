@@ -16,7 +16,10 @@ from .serializers import (
     ReenviarVerificacionSerializer
 )
 import secrets
+import logging
 from datetime import timedelta
+
+logger = logging.getLogger(__name__)
 
 
 @api_view(['POST'])
@@ -34,8 +37,7 @@ def register(request):
         expira_en=timezone.now() + timedelta(hours=24),
     )
 
-    enlace = f'{settings.FRONTEND_URL}/verify-email/{token}'
-    enlace_directo = f'{request.scheme}://{request.get_host()}/api/auth/verify-email/{token}/'
+    enlace_directo = f'{settings.FRONTEND_URL}/api/auth/verify-email/{token}/'
     try:
         send_mail(
             subject='Verifica tu correo electrónico - Citas Médicas',
@@ -47,10 +49,11 @@ def register(request):
                     f'Saludos,\nEquipo de Citas Médicas',
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[usuario.correo],
-            fail_silently=True,
+            fail_silently=False,
         )
-    except Exception:
-        pass
+        logger.info(f'Correo de verificación enviado a {usuario.correo}')
+    except Exception as e:
+        logger.error(f'Error al enviar correo de verificación a {usuario.correo}: {e}')
 
     return Response({
         'mensaje': 'Registro exitoso. Revisa tu correo para verificar tu cuenta.',
@@ -138,7 +141,7 @@ def resend_verification(request):
         expira_en=timezone.now() + timedelta(hours=24),
     )
 
-    enlace_directo = f'{request.scheme}://{request.get_host()}/api/auth/verify-email/{token}/'
+    enlace_directo = f'{settings.FRONTEND_URL}/api/auth/verify-email/{token}/'
     try:
         send_mail(
             subject='Verifica tu correo electrónico - Citas Médicas',
@@ -149,10 +152,11 @@ def resend_verification(request):
                     f'Saludos,\nEquipo de Citas Médicas',
             from_email=settings.DEFAULT_FROM_EMAIL,
             recipient_list=[usuario.correo],
-            fail_silently=True,
+            fail_silently=False,
         )
-    except Exception:
-        pass
+        logger.info(f'Correo de verificación reenviado a {usuario.correo}')
+    except Exception as e:
+        logger.error(f'Error al reenviar correo de verificación a {usuario.correo}: {e}')
 
     return Response({'mensaje': 'Si el correo existe y no está verificado, recibirás un enlace.'})
 
