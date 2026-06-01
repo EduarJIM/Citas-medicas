@@ -78,6 +78,15 @@ def medico_detail(request, pk):
         return Response({'mensaje': 'Médico desactivado'}, status=status.HTTP_200_OK)
 
 
+@api_view(['GET'])
+def mi_perfil_medico(request):
+    try:
+        medico = Medico.objects.get(pk=request.user.id_usuario)
+    except Medico.DoesNotExist:
+        return Response({'error': 'No eres un médico'}, status=status.HTTP_403_FORBIDDEN)
+    return Response(MedicoSerializer(medico).data)
+
+
 @api_view(['GET', 'POST'])
 def especialidad_list_create(request):
     if request.method == 'GET':

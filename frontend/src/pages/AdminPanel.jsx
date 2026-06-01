@@ -33,8 +33,8 @@ export default function AdminPanel() {
       api.get('/medicos/'),
       api.get('/especialidades/')
     ]).then(([m, e]) => {
-      setMedicos(m.data.results);
-      setEspecialidades(e.data.results);
+      setMedicos(m.data);
+      setEspecialidades(e.data);
     }).catch(() => {}).finally(() => setLoading(false));
   }, []);
 

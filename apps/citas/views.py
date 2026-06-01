@@ -6,6 +6,7 @@ from django.db import IntegrityError, transaction
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
+from rest_framework.pagination import PageNumberPagination
 from .models import Cita, EstadoCita, AuditoriaCita
 from .serializers import CitaSerializer, CrearCitaSerializer, CancelarCitaSerializer
 from apps.horarios.models import Horario
@@ -42,6 +43,12 @@ def cita_list_create(request):
             queryset = queryset.filter(id_horario__fecha__lte=fecha_hasta)
 
         queryset = queryset.order_by('-id_horario__fecha', '-id_horario__hora_inicio')
+
+        paginator = PageNumberPagination()
+        page = paginator.paginate_queryset(queryset, request)
+        if page is not None:
+            serializer = CitaSerializer(page, many=True)
+            return paginator.get_paginated_response(serializer.data)
         return Response(CitaSerializer(queryset, many=True).data)
 
     if request.method == 'POST':
@@ -118,6 +125,49 @@ def mis_pacientes(request):
     ).order_by('id_horario__hora_inicio')
 
     return Response(CitaSerializer(queryset, many=True).data)
+
+
+@api_view(['GET'])
+def mis_citas_medico(request):
+    try:
+        medico = Medico.objects.get(pk=request.user.id_usuario)
+    except Medico.DoesNotExist:
+        return Response({'error': 'Solo los médicos pueden acceder'}, status=status.HTTP_403_FORBIDDEN)
+
+    queryset = Cita.objects.select_related(
+        'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
+    ).filter(id_horario__id_medico=medico)
+
+    estado = request.query_params.get('estado')
+    if estado:
+        queryset = queryset.filter(id_estado__nombre=estado)
+    fecha_desde = request.query_params.get('fecha_desde')
+    if fecha_desde:
+        queryset = queryset.filter(id_horario__fecha__gte=fecha_desde)
+    fecha_hasta = request.query_params.get('fecha_hasta')
+    if fecha_hasta:
+        queryset = queryset.filter(id_horario__fecha__lte=fecha_hasta)
+
+    queryset = queryset.order_by('-id_horario__fecha', '-id_horario__hora_inicio')
+    return Response(CitaSerializer(queryset, many=True).data)
+
+
+@api_view(['GET'])
+def pacientes_medico(request):
+    try:
+        medico = Medico.objects.get(pk=request.user.id_usuario)
+    except Medico.DoesNotExist:
+        return Response({'error': 'Solo los médicos pueden acceder'}, status=status.HTTP_403_FORBIDDEN)
+
+    from apps.users.models import Usuario
+    from apps.users.serializers import UsuarioSerializer
+
+    paciente_ids = Cita.objects.filter(
+        id_horario__id_medico=medico
+    ).values_list('id_paciente', flat=True).distinct()
+
+    pacientes = Usuario.objects.filter(id_usuario__in=paciente_ids, activo=True)
+    return Response(UsuarioSerializer(pacientes, many=True).data)
 
 
 @api_view(['GET', 'PUT', 'DELETE'])

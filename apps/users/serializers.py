@@ -2,7 +2,7 @@ import re
 from django.contrib.auth import authenticate
 from rest_framework import serializers
 from rest_framework_simplejwt.tokens import RefreshToken
-from .models import Usuario, Paciente, TokenRecuperacion, Rol
+from .models import Usuario, Paciente, TokenRecuperacion, TokenVerificacion, Rol
 
 
 class RegistroSerializer(serializers.Serializer):
@@ -12,6 +12,16 @@ class RegistroSerializer(serializers.Serializer):
     telefono = serializers.CharField(max_length=30, required=False, allow_blank=True)
     password = serializers.CharField(write_only=True, min_length=8)
     password2 = serializers.CharField(write_only=True, min_length=8)
+
+    def validate_correo(self, value):
+        if Usuario.objects.filter(correo=value).exists():
+            raise serializers.ValidationError('Este correo electrónico ya está registrado.')
+        return value
+
+    def validate_documento(self, value):
+        if Usuario.objects.filter(documento=value).exists():
+            raise serializers.ValidationError('Este documento ya está registrado.')
+        return value
 
     def validate_password(self, value):
         if not re.search(r'[A-Z]', value):
@@ -83,3 +93,11 @@ class PasswordResetConfirmSerializer(serializers.Serializer):
         if data['password'] != data['password2']:
             raise serializers.ValidationError({'password2': 'Las contraseñas no coinciden'})
         return data
+
+
+class VerificacionSerializer(serializers.Serializer):
+    token = serializers.CharField()
+
+
+class ReenviarVerificacionSerializer(serializers.Serializer):
+    correo = serializers.EmailField()

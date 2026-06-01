@@ -32,7 +32,6 @@ INSTALLED_APPS = [
     'apps.citas',
     'apps.notificaciones',
     'apps.reportes',
-    'apps.recetas',
 ]
 
 MIDDLEWARE = [
@@ -110,9 +109,19 @@ TIME_ZONE = 'America/Bogota'
 USE_I18N = True
 USE_TZ = True
 
-# ── Email (desarrollo: consola) ────────────────────────────
-EMAIL_BACKEND = 'django.core.mail.backends.console.EmailBackend'
-DEFAULT_FROM_EMAIL = 'noreply@citasmedicas.com'
+# ── Email ───────────────────────────────────────────────────
+EMAIL_BACKEND = config('EMAIL_BACKEND', default='django.core.mail.backends.console.EmailBackend')
+DEFAULT_FROM_EMAIL = config('DEFAULT_FROM_EMAIL', default='noreply@citasmedicas.com')
+
+if 'smtp' in EMAIL_BACKEND:
+    EMAIL_HOST = config('EMAIL_HOST', default='smtp.gmail.com')
+    EMAIL_PORT = config('EMAIL_PORT', default=587, cast=int)
+    EMAIL_USE_TLS = config('EMAIL_USE_TLS', default=True, cast=bool)
+    EMAIL_HOST_USER = config('EMAIL_HOST_USER', default='')
+    EMAIL_HOST_PASSWORD = config('EMAIL_HOST_PASSWORD', default='')
+
+# ── Frontend URL para enlaces en correos ────────────────────
+FRONTEND_URL = config('FRONTEND_URL', default='http://localhost:5173')
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

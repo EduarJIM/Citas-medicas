@@ -50,6 +50,7 @@ class Usuario(AbstractBaseUser, PermissionsMixin):
     bloqueado_hasta = models.DateTimeField(null=True, blank=True)
     is_active = models.BooleanField(default=True)
     is_staff = models.BooleanField(default=False)
+    email_verificado = models.BooleanField(default=False)
 
     objects = UsuarioManager()
 
@@ -103,3 +104,21 @@ class TokenRecuperacion(models.Model):
 
     def __str__(self):
         return f'Token {self.id_usuario.correo}'
+
+
+class TokenVerificacion(models.Model):
+    id_token = models.BigAutoField(primary_key=True)
+    id_usuario = models.ForeignKey(
+        Usuario, on_delete=models.CASCADE, db_column='id_usuario'
+    )
+    token = models.CharField(max_length=255, unique=True)
+    expira_en = models.DateTimeField()
+    usado = models.BooleanField(default=False)
+
+    class Meta:
+        db_table = 'tokens_verificacion'
+        verbose_name = 'token de verificación'
+        verbose_name_plural = 'tokens de verificación'
+
+    def __str__(self):
+        return f'Token verificación {self.id_usuario.correo}'

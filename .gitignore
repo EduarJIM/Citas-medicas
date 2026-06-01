@@ -23,3 +23,11 @@ frontend/dist/
 # OS
 .DS_Store
 Thumbs.db
+
+# Logs
+*.log
+
+# Scripts
+run.ps1
+check_data.py
+seed_all.py
