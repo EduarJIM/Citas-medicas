@@ -32,9 +32,10 @@ class CitaSerializer(serializers.ModelSerializer):
         return obj.id_horario.id_medico.id_medico.nombre_completo
 
     def get_especialidad(self, obj):
-        from apps.medicos.models import MedicoEspecialidad
-        me = MedicoEspecialidad.objects.filter(id_medico=obj.id_horario.id_medico).first()
-        return me.id_especialidad.nombre if me else ''
+        mes = obj.id_horario.id_medico.medicoespecialidad_set.select_related('id_especialidad').all()
+        if mes:
+            return mes[0].id_especialidad.nombre
+        return ''
 
 
 class CrearCitaSerializer(serializers.Serializer):

@@ -11,31 +11,25 @@ from apps.citas.models import Cita, EstadoCita
 def reporte_citas_por_especialidad(request):
     if not request.user.is_superuser:
         return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
-    from apps.medicos.models import Especialidad, MedicoEspecialidad
-    from django.db.models import Count
-    import json
+    from apps.medicos.models import Especialidad
+    from django.db.models import Count, Q
 
-    data = []
-    for esp in Especialidad.objects.all():
-        total = Cita.objects.filter(
-            id_horario__id_medico__medicoespecialidad__id_especialidad=esp
-        ).count()
-        canceladas = Cita.objects.filter(
-            id_horario__id_medico__medicoespecialidad__id_especialidad=esp,
-            id_estado__nombre='cancelada'
-        ).count()
-        realizadas = Cita.objects.filter(
-            id_horario__id_medico__medicoespecialidad__id_especialidad=esp,
-            id_estado__nombre='realizada'
-        ).count()
-        data.append({
-            'especialidad': esp.nombre,
-            'total': total,
-            'canceladas': canceladas,
-            'realizadas': realizadas,
-        })
+    especialidades = Especialidad.objects.annotate(
+        total=Count('medicoespecialidad__id_medico__horario__cita', distinct=True),
+        canceladas=Count('medicoespecialidad__id_medico__horario__cita',
+            distinct=True,
+            filter=Q(medicoespecialidad__id_medico__horario__cita__id_estado__nombre='cancelada')),
+        realizadas=Count('medicoespecialidad__id_medico__horario__cita',
+            distinct=True,
+            filter=Q(medicoespecialidad__id_medico__horario__cita__id_estado__nombre='realizada')),
+    )
 
-    return Response(data)
+    return Response([{
+        'especialidad': esp.nombre,
+        'total': esp.total,
+        'canceladas': esp.canceladas,
+        'realizadas': esp.realizadas,
+    } for esp in especialidades])
 
 
 @api_view(['GET'])
@@ -43,31 +37,25 @@ def reporte_tasa_no_asistencia(request):
     if not request.user.is_superuser:
         return Response({'error': 'No autorizado'}, status=status.HTTP_403_FORBIDDEN)
     from apps.medicos.models import Medico
+    from django.db.models import Count, Q
 
-    data = []
     total_no_asistio = Cita.objects.filter(id_estado__nombre='no_asistio').count()
     total_realizadas = Cita.objects.filter(id_estado__nombre='realizada').count()
     total_atendidas = total_realizadas + total_no_asistio
 
-    for medico in Medico.objects.filter(estado='activo'):
-        no_asistio = Cita.objects.filter(
-            id_horario__id_medico=medico,
-            id_estado__nombre='no_asistio'
-        ).count()
-        realizadas = Cita.objects.filter(
-            id_horario__id_medico=medico,
-            id_estado__nombre='realizada'
-        ).count()
-        total_medico = no_asistio + realizadas
-        tasa = (no_asistio / total_medico * 100) if total_medico > 0 else 0
-        data.append({
-            'medico': medico.id_medico.nombre_completo,
-            'no_asistio': no_asistio,
-            'realizadas': realizadas,
-            'tasa_no_asistencia': round(tasa, 2),
-        })
+    medicos = Medico.objects.filter(estado='activo').select_related('id_medico').annotate(
+        no_asistio=Count('horario__cita',
+            filter=Q(horario__cita__id_estado__nombre='no_asistio'), distinct=True),
+        realizadas=Count('horario__cita',
+            filter=Q(horario__cita__id_estado__nombre='realizada'), distinct=True),
+    )
 
-    return Response(data)
+    return Response([{
+        'medico': m.id_medico.nombre_completo,
+        'no_asistio': m.no_asistio,
+        'realizadas': m.realizadas,
+        'tasa_no_asistencia': round((m.no_asistio / (m.no_asistio + m.realizadas) * 100) if (m.no_asistio + m.realizadas) > 0 else 0, 2),
+    } for m in medicos])
 
 
 @api_view(['GET'])

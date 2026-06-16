@@ -14,6 +14,7 @@ class RegistroSerializer(serializers.Serializer):
     password2 = serializers.CharField(write_only=True, min_length=8)
 
     def validate_correo(self, value):
+        value = value.strip().lower()
         if Usuario.objects.filter(correo=value).exists():
             raise serializers.ValidationError('Este correo electrónico ya está registrado.')
         return value
@@ -74,6 +75,9 @@ class PacienteSerializer(serializers.ModelSerializer):
 class PasswordResetRequestSerializer(serializers.Serializer):
     correo = serializers.EmailField()
 
+    def validate_correo(self, value):
+        return value.strip().lower()
+
 
 class PasswordResetConfirmSerializer(serializers.Serializer):
     token = serializers.CharField()
@@ -101,3 +105,6 @@ class VerificacionSerializer(serializers.Serializer):
 
 class ReenviarVerificacionSerializer(serializers.Serializer):
     correo = serializers.EmailField()
+
+    def validate_correo(self, value):
+        return value.strip().lower()

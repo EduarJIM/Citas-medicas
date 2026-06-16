@@ -37,7 +37,7 @@ def register(request):
         expira_en=timezone.now() + timedelta(hours=24),
     )
 
-    enlace_directo = f'{settings.FRONTEND_URL}/api/auth/verify-email/{token}/'
+    enlace_directo = f'{settings.FRONTEND_URL}/verify-email/{token}/'
     try:
         send_mail(
             subject='Verifica tu correo electrónico - Citas Médicas',
@@ -124,9 +124,11 @@ def resend_verification(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
 
+    correo = serializer.validated_data['correo'].strip().lower()
+
     try:
         usuario = Usuario.objects.get(
-            correo=serializer.validated_data['correo'],
+            correo=correo,
             email_verificado=False
         )
     except Usuario.DoesNotExist:
@@ -141,7 +143,7 @@ def resend_verification(request):
         expira_en=timezone.now() + timedelta(hours=24),
     )
 
-    enlace_directo = f'{settings.FRONTEND_URL}/api/auth/verify-email/{token}/'
+    enlace_directo = f'{settings.FRONTEND_URL}/verify-email/{token}/'
     try:
         send_mail(
             subject='Verifica tu correo electrónico - Citas Médicas',
@@ -164,7 +166,7 @@ def resend_verification(request):
 @api_view(['POST'])
 @permission_classes([AllowAny])
 def login(request):
-    correo = request.data.get('correo', '')
+    correo = request.data.get('correo', '').strip().lower()
     password = request.data.get('password', '')
     try:
         usuario = Usuario.objects.get(correo=correo)
@@ -177,19 +179,38 @@ def login(request):
     if not usuario.email_verificado:
         return Response({
             'error': 'Debes verificar tu correo electrónico antes de iniciar sesión.',
-            'codigo': 'email_no_verificado'
+            'codigo': 'email_no_verificado',
+            'correo': usuario.correo,
         }, status=status.HTTP_403_FORBIDDEN)
 
+    max_intentos = 3
+    tiempo_bloqueo = timedelta(minutes=15)
     if usuario.bloqueado_hasta and timezone.now() < usuario.bloqueado_hasta:
-        return Response({'error': 'Cuenta bloqueada. Intente más tarde.'}, status=status.HTTP_423_LOCKED)
+        restante = int((usuario.bloqueado_hasta - timezone.now()).total_seconds())
+        return Response({
+            'error': 'Cuenta bloqueada. Intente más tarde.',
+            'bloqueado': True,
+            'segundos_restantes': restante,
+        }, status=status.HTTP_423_LOCKED)
 
     user = authenticate(correo=correo, password=password)
     if not user:
         usuario.intentos_fallidos += 1
-        if usuario.intentos_fallidos >= 3:
-            usuario.bloqueado_hasta = timezone.now() + timedelta(minutes=15)
+        restantes = max_intentos - usuario.intentos_fallidos
+        if usuario.intentos_fallidos >= max_intentos:
+            usuario.bloqueado_hasta = timezone.now() + tiempo_bloqueo
+            usuario.save(update_fields=['intentos_fallidos', 'bloqueado_hasta'])
+            return Response({
+                'error': f'Cuenta bloqueada por 15 minutos por demasiados intentos.',
+                'intentos_restantes': 0,
+                'bloqueado': True,
+                'segundos_restantes': int(tiempo_bloqueo.total_seconds()),
+            }, status=status.HTTP_423_LOCKED)
         usuario.save(update_fields=['intentos_fallidos', 'bloqueado_hasta'])
-        return Response({'error': 'Credenciales inválidas'}, status=status.HTTP_401_UNAUTHORIZED)
+        return Response({
+            'error': f'Credenciales invalidas. Te quedan {restantes} intento(s).',
+            'intentos_restantes': restantes,
+        }, status=status.HTTP_401_UNAUTHORIZED)
 
     usuario.intentos_fallidos = 0
     usuario.bloqueado_hasta = None
@@ -245,17 +266,34 @@ def password_reset_request(request):
     if not serializer.is_valid():
         return Response(serializer.errors, status=status.HTTP_400_BAD_REQUEST)
     try:
-        usuario = Usuario.objects.get(correo=serializer.validated_data['correo'])
+        usuario = Usuario.objects.get(correo=serializer.validated_data['correo'].strip().lower())
         token = secrets.token_urlsafe(32)
         TokenRecuperacion.objects.create(
             id_usuario=usuario,
             token=token,
-            expira_en=timezone.now() + timedelta(hours=1),
+            expira_en=timezone.now() + timedelta(hours=24),
         )
-        # En producción se enviaría un correo real
-        return Response({'mensaje': 'Si el correo existe, recibirás un enlace de recuperación', 'token': token})
+        enlace = f'{settings.FRONTEND_URL}/reset-password/{token}/'
+        try:
+            send_mail(
+                subject='Recuperacion de contrasena - Citas Medicas',
+                message=f'Hola {usuario.nombre_completo},\n\n'
+                        f'Recibimos una solicitud para restablecer tu contrasena.\n\n'
+                        f'Haz clic en el siguiente enlace para crear una nueva contrasena:\n\n'
+                        f'{enlace}\n\n'
+                        f'Este enlace expira en 24 horas.\n\n'
+                        f'Si no solicitaste este cambio, ignora este mensaje.\n\n'
+                        f'Saludos,\nEquipo de Citas Medicas',
+                from_email=settings.DEFAULT_FROM_EMAIL,
+                recipient_list=[usuario.correo],
+                fail_silently=False,
+            )
+            logger.info(f'Correo de recuperación enviado a {usuario.correo}')
+        except Exception as e:
+            logger.error(f'Error al enviar correo de recuperación a {usuario.correo}: {e}')
     except Usuario.DoesNotExist:
-        return Response({'mensaje': 'Si el correo existe, recibirás un enlace de recuperación'})
+        pass
+    return Response({'mensaje': 'Si el correo existe, recibiras un enlace de recuperacion'})
 
 
 @api_view(['POST'])
@@ -277,4 +315,20 @@ def password_reset_confirm(request):
         token_obj.save(update_fields=['usado'])
         return Response({'mensaje': 'Contraseña actualizada correctamente'})
     except TokenRecuperacion.DoesNotExist:
-        return Response({'error': 'Token inválido o expirado'}, status=status.HTTP_400_BAD_REQUEST)
+        return Response({'error': 'Token invalido o expirado'}, status=status.HTTP_400_BAD_REQUEST)
+
+
+@api_view(['POST'])
+@permission_classes([IsAuthenticated])
+def cambiar_password(request):
+    password = request.data.get('password')
+    password2 = request.data.get('password2')
+    if not password or not password2:
+        return Response({'error': 'Ambos campos son requeridos'}, status=status.HTTP_400_BAD_REQUEST)
+    if password != password2:
+        return Response({'error': 'Las contrasenas no coinciden'}, status=status.HTTP_400_BAD_REQUEST)
+    if len(password) < 8:
+        return Response({'error': 'La contrasena debe tener al menos 8 caracteres'}, status=status.HTTP_400_BAD_REQUEST)
+    request.user.set_password(password)
+    request.user.save(update_fields=['password'])
+    return Response({'mensaje': 'Contrasena actualizada correctamente'})

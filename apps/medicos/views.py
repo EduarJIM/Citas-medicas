@@ -1,3 +1,4 @@
+from django.db.models import Prefetch
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import AllowAny, IsAuthenticated
@@ -9,7 +10,9 @@ from .serializers import MedicoSerializer, MedicoListSerializer, EspecialidadSer
 @api_view(['GET', 'POST'])
 def medico_list_create(request):
     if request.method == 'GET':
-        queryset = Medico.objects.filter(estado='activo')
+        queryset = Medico.objects.filter(estado='activo').select_related('id_medico').prefetch_related(
+            Prefetch('medicoespecialidad_set', queryset=MedicoEspecialidad.objects.select_related('id_especialidad'), to_attr='especialidades_cache')
+        )
         especialidad = request.query_params.get('especialidad')
         if especialidad:
             queryset = queryset.filter(
@@ -50,7 +53,7 @@ def medico_list_create(request):
 @api_view(['GET', 'PUT', 'DELETE'])
 def medico_detail(request, pk):
     try:
-        medico = Medico.objects.get(pk=pk)
+        medico = Medico.objects.select_related('id_medico').get(pk=pk)
     except Medico.DoesNotExist:
         return Response({'error': 'Médico no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -81,7 +84,7 @@ def medico_detail(request, pk):
 @api_view(['GET'])
 def mi_perfil_medico(request):
     try:
-        medico = Medico.objects.get(pk=request.user.id_usuario)
+        medico = Medico.objects.select_related('id_medico').get(pk=request.user.id_usuario)
     except Medico.DoesNotExist:
         return Response({'error': 'No eres un médico'}, status=status.HTTP_403_FORBIDDEN)
     return Response(MedicoSerializer(medico).data)

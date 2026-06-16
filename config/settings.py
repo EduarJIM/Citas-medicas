@@ -98,8 +98,9 @@ SIMPLE_JWT = {
 
 # ── CORS (permite que el frontend se conecte) ──────────────
 CORS_ALLOWED_ORIGINS = [
-    "http://localhost:3000",   # React
-    "http://localhost:5173",   # Vite
+    "http://localhost:3000",
+    "http://localhost:5173",
+    "http://localhost:5174",
     "http://127.0.0.1:8000",
 ]
 
@@ -130,6 +131,8 @@ if not PUBLIC_URL:
     PUBLIC_URL = f'http://{local_ip}:8000'
 
 FRONTEND_URL = config('FRONTEND_URL', default=PUBLIC_URL)
+
+SWAGGER_USE_COMPAT_RENDERERS = False
 
 STATIC_URL = 'static/'
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'

@@ -27,7 +27,7 @@ export default function MiPerfil() {
           telefono: d.telefono || '',
           documento: d.documento || '',
         });
-      } catch (err) {
+      } catch {
         setError('Error al cargar los datos del perfil');
       } finally {
         setLoading(false);
@@ -60,45 +60,94 @@ export default function MiPerfil() {
 
   if (loading) return <LoadingSpinner />;
 
+  const esPaciente = user?.rol === 'paciente';
+
   return (
-    <div className="auth-container">
-      <div className="auth-card">
-        <h2>Mi Perfil</h2>
-        {error && <div className="alert alert-error">{error}</div>}
-        {success && <div className="alert alert-success">{success}</div>}
-        <form onSubmit={handleSubmit}>
-          <div className="form-group">
-            <label>Nombre completo</label>
-            <input
-              type="text"
-              name="nombre_completo"
-              value={formData.nombre_completo}
-              onChange={handleChange}
-              required
-            />
+    <div className={esPaciente ? 'pp-container' : 'page-container'}>
+      {esPaciente ? (
+        <>
+          <div className="pp-header">
+            <div className="pp-header-content">
+              <div className="pp-avatar">
+                {(formData.nombre_completo || 'U')[0].toUpperCase()}
+              </div>
+              <div className="pp-header-text">
+                <h1>Mi Perfil</h1>
+                <p>Administra tus datos personales</p>
+              </div>
+            </div>
           </div>
-          <div className="form-group">
-            <label>Correo electrónico</label>
-            <input type="email" value={formData.correo} disabled />
+
+          <div className="pp-section">
+            <div className="pp-section-header">
+              <h2>
+                <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" width="20" height="20">
+                  <path d="M20 21v-2a4 4 0 00-4-4H8a4 4 0 00-4 4v2"/><circle cx="12" cy="7" r="4"/>
+                </svg>
+                Informacion Personal
+              </h2>
+            </div>
+
+            {error && <div className="alert alert-error">{error}</div>}
+            {success && <div className="alert alert-success">{success}</div>}
+
+            <form onSubmit={handleSubmit} className="pp-form">
+              <div className="pp-form-row">
+                <div className="pp-form-group">
+                  <label>Nombre completo</label>
+                  <input type="text" name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} required />
+                </div>
+                <div className="pp-form-group">
+                  <label>Telefono</label>
+                  <input type="text" name="telefono" value={formData.telefono} onChange={handleChange} />
+                </div>
+              </div>
+              <div className="pp-form-row">
+                <div className="pp-form-group">
+                  <label>Correo electronico</label>
+                  <input type="email" value={formData.correo} disabled className="pp-input-disabled" />
+                </div>
+                <div className="pp-form-group">
+                  <label>Documento</label>
+                  <input type="text" value={formData.documento} disabled className="pp-input-disabled" />
+                </div>
+              </div>
+              <button type="submit" className="pp-btn pp-btn-primary" disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </form>
           </div>
-          <div className="form-group">
-            <label>Teléfono</label>
-            <input
-              type="text"
-              name="telefono"
-              value={formData.telefono}
-              onChange={handleChange}
-            />
+        </>
+      ) : (
+        <>
+          <h1>Mi Perfil</h1>
+          {error && <div className="alert alert-error">{error}</div>}
+          {success && <div className="alert alert-success">{success}</div>}
+          <div className="card">
+            <form onSubmit={handleSubmit}>
+              <div className="form-group">
+                <label>Nombre completo</label>
+                <input type="text" name="nombre_completo" value={formData.nombre_completo} onChange={handleChange} required />
+              </div>
+              <div className="form-group">
+                <label>Correo electronico</label>
+                <input type="email" value={formData.correo} disabled />
+              </div>
+              <div className="form-group">
+                <label>Telefono</label>
+                <input type="text" name="telefono" value={formData.telefono} onChange={handleChange} />
+              </div>
+              <div className="form-group">
+                <label>Documento</label>
+                <input type="text" value={formData.documento} disabled />
+              </div>
+              <button type="submit" className="btn btn-primary" disabled={saving}>
+                {saving ? 'Guardando...' : 'Guardar cambios'}
+              </button>
+            </form>
           </div>
-          <div className="form-group">
-            <label>Documento</label>
-            <input type="text" value={formData.documento} disabled />
-          </div>
-          <button type="submit" className="btn btn-primary btn-block" disabled={saving}>
-            {saving ? 'Guardando...' : 'Guardar cambios'}
-          </button>
-        </form>
-      </div>
+        </>
+      )}
     </div>
   );
 }

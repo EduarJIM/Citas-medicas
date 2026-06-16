@@ -12,12 +12,15 @@ def seed_roles(db):
 
 @pytest.fixture
 def admin_user(db, seed_roles):
-    return Usuario.objects.create_superuser(
+    user = Usuario.objects.create_superuser(
         correo='admin@test.com',
         password='Admin123!',
         nombre_completo='Admin Test',
         documento='00000000',
     )
+    user.email_verificado = True
+    user.save(update_fields=['email_verificado'])
+    return user
 
 
 @pytest.fixture
@@ -30,6 +33,8 @@ def medico_user(db, seed_roles):
         documento='22222222',
         telefono='3002222222',
         id_rol=rol_medico,
+        email_verificado=True,
+        is_active=True,
     )
     Medico.objects.create(id_medico=user, registro_profesional='RP12345', consultorio='101')
     return user
@@ -46,6 +51,8 @@ def paciente_user(db, seed_roles):
         documento='11111111',
         telefono='3001111111',
         id_rol=rol_paciente,
+        email_verificado=True,
+        is_active=True,
     )
     Paciente.objects.create(id_paciente=user)
     return user

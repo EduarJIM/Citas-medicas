@@ -3,7 +3,9 @@ import { Link, useNavigate, useLocation } from 'react-router-dom';
 import { useAuth } from '../context/AuthContext';
 import ThemeToggle from './ThemeToggle';
 
-export default function Navbar() {
+import React from 'react';
+
+export default React.memo(function Navbar() {
   const [menuOpen, setMenuOpen] = useState(false);
   const { user, logout } = useAuth();
   const navigate = useNavigate();
@@ -43,12 +45,13 @@ export default function Navbar() {
         <div className={`nav-links${menuOpen ? ' nav-links-open' : ''}`}>
           {user ? (
             <>
-              <Link to="/dashboard" onClick={closeMenu}>Inicio</Link>
-              <Link to="/agendar" onClick={closeMenu}>Agendar Cita</Link>
+              <Link to="/dashboard" onClick={closeMenu}>{user.rol === 'paciente' ? 'Mi Portal' : 'Inicio'}</Link>
+              {user.rol === 'paciente' && <Link to="/agendar" onClick={closeMenu}>Agendar Cita</Link>}
               <Link to="/mis-citas" onClick={closeMenu}>Mis Citas</Link>
               {user.rol === 'medico' && <Link to="/mis-pacientes" onClick={closeMenu}>Mi Panel</Link>}
               {user.rol === 'admin' && <Link to="/admin" onClick={closeMenu}>Admin</Link>}
               <Link to="/perfil" onClick={closeMenu}>Mi Perfil</Link>
+              <Link to="/cambiar-password" onClick={closeMenu} style={{ fontSize: '0.82rem', opacity: 0.85 }}>Cambiar Contrasena</Link>
               <ThemeToggle />
               <span className="nav-user">{user.nombre_completo || user.correo}</span>
               <button onClick={handleLogout} className="btn-link">Cerrar sesión</button>
@@ -65,4 +68,4 @@ export default function Navbar() {
       </div>
     </nav>
   );
-}
+})

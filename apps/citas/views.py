@@ -3,6 +3,7 @@ from django.conf import settings
 from django.core.mail import send_mail
 from django.utils import timezone
 from django.db import IntegrityError, transaction
+from django.db.models import Prefetch
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
@@ -10,7 +11,7 @@ from rest_framework.pagination import PageNumberPagination
 from .models import Cita, EstadoCita, AuditoriaCita
 from .serializers import CitaSerializer, CrearCitaSerializer, CancelarCitaSerializer
 from apps.horarios.models import Horario
-from apps.medicos.models import Medico
+from apps.medicos.models import Medico, MedicoEspecialidad
 from apps.notificaciones.models import Notificacion
 
 
@@ -23,9 +24,15 @@ def _get_estado(nombre):
 
 @api_view(['GET', 'POST'])
 def cita_list_create(request):
+    if not request.user.is_authenticated:
+        return Response({'error': 'Autenticacion requerida'}, status=status.HTTP_401_UNAUTHORIZED)
+
     if request.method == 'GET':
         queryset = Cita.objects.select_related(
             'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
+        ).prefetch_related(
+            Prefetch('id_horario__id_medico__medicoespecialidad_set',
+                     queryset=MedicoEspecialidad.objects.select_related('id_especialidad'))
         ).all()
 
         # Filtros
@@ -118,7 +125,7 @@ def mis_pacientes(request):
         return Response({'error': 'Solo los médicos pueden acceder'}, status=status.HTTP_403_FORBIDDEN)
 
     queryset = Cita.objects.select_related(
-        'id_paciente', 'id_horario', 'id_estado'
+        'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
     ).filter(
         id_horario__id_medico=medico,
         id_horario__fecha=timezone.now().date()
@@ -174,7 +181,7 @@ def pacientes_medico(request):
 def cita_detail(request, pk):
     try:
         cita = Cita.objects.select_related(
-            'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_estado'
+            'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
         ).get(pk=pk)
     except Cita.DoesNotExist:
         return Response({'error': 'Cita no encontrada'}, status=status.HTTP_404_NOT_FOUND)
@@ -213,7 +220,9 @@ def cita_detail(request, pk):
 @api_view(['PATCH'])
 def atender_cita(request, pk):
     try:
-        cita = Cita.objects.select_related('id_horario__id_medico', 'id_estado').get(pk=pk)
+        cita = Cita.objects.select_related(
+            'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
+        ).get(pk=pk)
     except Cita.DoesNotExist:
         return Response({'error': 'Cita no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -270,7 +279,9 @@ def atender_cita(request, pk):
 @api_view(['PATCH'])
 def confirmar_cita(request, pk):
     try:
-        cita = Cita.objects.select_related('id_horario__id_medico', 'id_estado').get(pk=pk)
+        cita = Cita.objects.select_related(
+            'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
+        ).get(pk=pk)
     except Cita.DoesNotExist:
         return Response({'error': 'Cita no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -304,7 +315,7 @@ def confirmar_cita(request, pk):
 @api_view(['DELETE'])
 def eliminar_cita(request, pk):
     try:
-        cita = Cita.objects.get(pk=pk)
+        cita = Cita.objects.select_related('id_horario', 'id_estado', 'id_paciente').get(pk=pk)
     except Cita.DoesNotExist:
         return Response({'error': 'Cita no encontrada'}, status=status.HTTP_404_NOT_FOUND)
 
@@ -336,7 +347,7 @@ def historial_paciente(request, pk):
         return Response({'error': 'Paciente no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
     citas = Cita.objects.select_related(
-        'id_horario', 'id_horario__id_medico__id_medico', 'id_estado'
+        'id_paciente', 'id_horario', 'id_horario__id_medico', 'id_horario__id_medico__id_medico', 'id_estado'
     ).filter(id_paciente=pk).order_by('-id_horario__fecha', '-id_horario__hora_inicio')
 
     return Response({

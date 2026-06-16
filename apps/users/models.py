@@ -29,6 +29,7 @@ class UsuarioManager(BaseUserManager):
         extra_fields.setdefault('is_staff', True)
         extra_fields.setdefault('is_superuser', True)
         extra_fields.setdefault('activo', True)
+        extra_fields.setdefault('email_verificado', True)
         rol_admin, _ = Rol.objects.get_or_create(nombre='admin')
         extra_fields.setdefault('id_rol', rol_admin)
         return self.create_user(correo, password, **extra_fields)

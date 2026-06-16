@@ -22,7 +22,10 @@ class MedicoListSerializer(serializers.ModelSerializer):
         fields = ('id_medico', 'nombre_completo', 'registro_profesional', 'consultorio', 'estado', 'especialidades')
 
     def get_especialidades(self, obj):
-        return [me.id_especialidad.nombre for me in MedicoEspecialidad.objects.filter(id_medico=obj)]
+        prefetched = getattr(obj, 'especialidades_cache', None)
+        if prefetched is not None:
+            return [me.id_especialidad.nombre for me in prefetched]
+        return [me.id_especialidad.nombre for me in obj.medicoespecialidad_set.select_related('id_especialidad').all()]
 
 
 class EspecialidadSerializer(serializers.ModelSerializer):

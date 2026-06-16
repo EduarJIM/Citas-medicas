@@ -1,3 +1,4 @@
+from unittest.mock import patch
 import pytest
 from django.utils import timezone
 from datetime import timedelta, time
@@ -23,6 +24,8 @@ def medico_user(db, seed_roles):
         documento='22222222',
         telefono='3002222222',
         id_rol=rol_medico,
+        email_verificado=True,
+        is_active=True,
     )
     Medico.objects.create(id_medico=user, registro_profesional='RP12345', consultorio='101')
     return user
@@ -39,6 +42,8 @@ def paciente_user(db, seed_roles):
         documento='11111111',
         telefono='3001111111',
         id_rol=rol_paciente,
+        email_verificado=True,
+        is_active=True,
     )
     Paciente.objects.create(id_paciente=user)
     return user
@@ -67,7 +72,8 @@ def _fecha_futura():
 @pytest.mark.django_db
 class TestDisponibilidadList:
 
-    def test_list_disponibilidad_empty(self, client, medico_user):
+    @patch('django.core.management.call_command')
+    def test_list_disponibilidad_empty(self, mock_call, client, medico_user):
         response = client.get(f'/api/medicos/{medico_user.id_usuario}/disponibilidad/')
         assert response.status_code == status.HTTP_200_OK
         assert response.json() == []
@@ -101,7 +107,8 @@ class TestDisponibilidadList:
         assert response.status_code == status.HTTP_200_OK
         assert len(response.json()) == 1
 
-    def test_list_disponibilidad_excludes_non_disponible(self, client, medico_user):
+    @patch('django.core.management.call_command')
+    def test_list_disponibilidad_excludes_non_disponible(self, mock_call, client, medico_user):
         futuro = _fecha_futura()
         Horario.objects.create(
             id_medico=Medico.objects.get(id_medico=medico_user),
@@ -116,7 +123,8 @@ class TestDisponibilidadList:
         response = client.get('/api/medicos/99999/disponibilidad/')
         assert response.status_code == status.HTTP_404_NOT_FOUND
 
-    def test_list_disponibilidad_excludes_past_dates(self, client, medico_user):
+    @patch('django.core.management.call_command')
+    def test_list_disponibilidad_excludes_past_dates(self, mock_call, client, medico_user):
         pasado = timezone.now().date() - timedelta(days=1)
         Horario.objects.create(
             id_medico=Medico.objects.get(id_medico=medico_user),

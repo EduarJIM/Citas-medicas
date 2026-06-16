@@ -31,6 +31,8 @@ def paciente_user(db, seed_roles):
         documento='11111111',
         telefono='3001111111',
         id_rol=rol_paciente,
+        email_verificado=True,
+        is_active=True,
     )
     Paciente.objects.create(id_paciente=user)
     return user
@@ -46,6 +48,8 @@ def medico_user(db, seed_roles):
         documento='22222222',
         telefono='3002222222',
         id_rol=rol_medico,
+        email_verificado=True,
+        is_active=True,
     )
     Medico.objects.create(id_medico=user, registro_profesional='RP12345', consultorio='101')
     return user
@@ -53,12 +57,15 @@ def medico_user(db, seed_roles):
 
 @pytest.fixture
 def admin_user(db, seed_roles):
-    return Usuario.objects.create_superuser(
+    user = Usuario.objects.create_superuser(
         correo='admin@test.com',
         password='Admin123!',
         nombre_completo='Admin Test',
         documento='00000000',
     )
+    user.email_verificado = True
+    user.save(update_fields=['email_verificado'])
+    return user
 
 
 @pytest.fixture
@@ -326,7 +333,7 @@ class TestCitaList:
             '/api/citas/', HTTP_AUTHORIZATION=f'Bearer {paciente_token}',
         )
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == []
+        assert response.json()['results'] == []
 
     def test_list_citas_filters_by_estado(self, client, paciente_user, paciente_token,
                                           horario_futuro, seed_estados):
@@ -335,7 +342,7 @@ class TestCitaList:
             '/api/citas/?estado=pendiente', HTTP_AUTHORIZATION=f'Bearer {paciente_token}',
         )
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.json()) == 1
+        assert len(response.json()['results']) == 1
 
     def test_list_citas_estado_no_match(self, client, paciente_user, paciente_token,
                                         horario_futuro, seed_estados):
@@ -344,7 +351,7 @@ class TestCitaList:
             '/api/citas/?estado=realizada', HTTP_AUTHORIZATION=f'Bearer {paciente_token}',
         )
         assert response.status_code == status.HTTP_200_OK
-        assert response.json() == []
+        assert response.json()['results'] == []
 
     def test_list_citas_paciente_only_sees_own(self, client, paciente_user, paciente_token,
                                                medico_user, horario_futuro, seed_estados):
@@ -353,6 +360,8 @@ class TestCitaList:
             correo='otro@test.com', password='Pac1234!',
             nombre_completo='Otro', documento='99999999',
             id_rol=Rol.objects.get(nombre='paciente'),
+            email_verificado=True,
+            is_active=True,
         )
         otro_token = client.post('/api/auth/login/', {
             'correo': 'otro@test.com', 'password': 'Pac1234!',
@@ -361,7 +370,7 @@ class TestCitaList:
             '/api/citas/', HTTP_AUTHORIZATION=f'Bearer {otro_token}',
         )
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.json()) == 0
+        assert len(response.json()['results']) == 0
 
     def test_list_citas_admin_sees_all(self, client, paciente_user, paciente_token,
                                        medico_user, admin_user, admin_token,
@@ -371,4 +380,4 @@ class TestCitaList:
             '/api/citas/', HTTP_AUTHORIZATION=f'Bearer {admin_token}',
         )
         assert response.status_code == status.HTTP_200_OK
-        assert len(response.json()) == 1
+        assert len(response.json()['results']) == 1

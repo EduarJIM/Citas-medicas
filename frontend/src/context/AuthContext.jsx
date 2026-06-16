@@ -1,4 +1,4 @@
-import { createContext, useContext, useState, useEffect } from 'react';
+import { createContext, useContext, useState, useEffect, useCallback } from 'react';
 import api from '../api/axios';
 
 const AuthContext = createContext(null);
@@ -22,33 +22,33 @@ export function AuthProvider({ children }) {
     setLoading(false);
   }, []);
 
-  const login = async (correo, password) => {
+  const login = useCallback(async (correo, password) => {
     const res = await api.post('/auth/login/', { correo, password });
     localStorage.setItem('access_token', res.data.access);
     localStorage.setItem('refresh_token', res.data.refresh);
     setUser(res.data.usuario);
     return res.data;
-  };
+  }, []);
 
-  const register = async (data) => {
+  const register = useCallback(async (data) => {
     const res = await api.post('/auth/register/', data);
     return res.data;
-  };
+  }, []);
 
-  const verifyEmail = async (token) => {
+  const verifyEmail = useCallback(async (token) => {
     const res = await api.post('/auth/verify-email/', { token });
     return res.data;
-  };
+  }, []);
 
-  const resendVerification = async (correo) => {
+  const resendVerification = useCallback(async (correo) => {
     const res = await api.post('/auth/resend-verification/', { correo });
     return res.data;
-  };
+  }, []);
 
-  const logout = () => {
+  const logout = useCallback(() => {
     localStorage.clear();
     setUser(null);
-  };
+  }, []);
 
   return (
     <AuthContext.Provider value={{ user, login, register, logout, loading, verifyEmail, resendVerification }}>

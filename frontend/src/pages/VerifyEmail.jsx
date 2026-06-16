@@ -4,9 +4,13 @@ import { useAuth } from '../context/AuthContext';
 
 export default function VerifyEmail() {
   const { token } = useParams();
-  const { verifyEmail } = useAuth();
+  const { verifyEmail, resendVerification } = useAuth();
   const [status, setStatus] = useState('loading');
   const [message, setMessage] = useState('');
+  const query = new URLSearchParams(window.location.search);
+  const [correoReenvio, setCorreoReenvio] = useState(query.get('correo') || '');
+  const [reenviando, setReenviando] = useState(false);
+  const [mensajeReenvio, setMensajeReenvio] = useState('');
 
   useEffect(() => {
     if (!token) {
@@ -21,9 +25,21 @@ export default function VerifyEmail() {
       })
       .catch((err) => {
         setStatus('error');
-        setMessage(err.response?.data?.error || 'Error al verificar el correo. El token puede ser inválido o haber expirado.');
+        setMessage(err.response?.data?.error || 'El token es invalido o ha expirado.');
       });
   }, [token, verifyEmail]);
+
+  const handleResend = async () => {
+    if (!correoReenvio) return;
+    setReenviando(true);
+    setMensajeReenvio('');
+    try {
+      const res = await resendVerification(correoReenvio);
+      setMensajeReenvio(res.mensaje || 'Si el correo existe, recibiras un nuevo enlace.');
+    } catch {
+      setMensajeReenvio('Error al reenviar. Intenta de nuevo mas tarde.');
+    } finally { setReenviando(false); }
+  };
 
   return (
     <div className="auth-container">
@@ -36,21 +52,37 @@ export default function VerifyEmail() {
             <rect x="8" y="22" width="48" height="20" rx="4"/>
           </svg>
         </div>
-        <h2>Verificación de Correo</h2>
+        <h2>Verificacion de Correo</h2>
         {status === 'loading' && <p style={{ textAlign: 'center' }}>Verificando tu correo...</p>}
         {status === 'success' && (
           <>
             <div className="alert alert-success">{message}</div>
             <p style={{ textAlign: 'center', marginTop: '1rem' }}>
-              <Link to="/login">Iniciar sesión</Link>
+              <Link to="/login">Iniciar sesion</Link>
             </p>
           </>
         )}
         {status === 'error' && (
           <>
             <div className="alert alert-error">{message}</div>
+            <div style={{ marginTop: '1rem' }}>
+              <p style={{ color: 'rgba(255,255,255,0.8)', fontSize: '0.9rem', textAlign: 'center', marginBottom: '0.5rem' }}>
+                Ingresa tu correo para reenviar el enlace:
+              </p>
+              <div className="form-group">
+                <input type="email" value={correoReenvio} onChange={(e) => setCorreoReenvio(e.target.value)} placeholder="correo@ejemplo.com" />
+              </div>
+              <button className="btn btn-secondary btn-block" onClick={handleResend} disabled={reenviando || !correoReenvio}>
+                {reenviando ? 'Enviando...' : 'Reenviar enlace'}
+              </button>
+              {mensajeReenvio && (
+                <p className={mensajeReenvio.includes('Error') ? 'alert alert-error' : 'alert alert-success'} style={{ marginTop: '0.5rem', fontSize: '0.85rem' }}>
+                  {mensajeReenvio}
+                </p>
+              )}
+            </div>
             <p style={{ textAlign: 'center', marginTop: '1rem' }}>
-              <Link to="/login">Volver al inicio de sesión</Link>
+              <Link to="/login">Volver al inicio de sesion</Link>
             </p>
           </>
         )}

@@ -1,4 +1,5 @@
-from datetime import datetime, timedelta, time, date
+from datetime import datetime, timedelta, time
+from django.utils import timezone
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.permissions import IsAuthenticated
@@ -16,7 +17,14 @@ def disponibilidad_list(request, medico_pk):
     except Medico.DoesNotExist:
         return Response({'error': 'Médico no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 
-    queryset = Horario.objects.filter(id_medico=medico, disponible=True, fecha__gte=date.today())
+    queryset = Horario.objects.filter(id_medico=medico, disponible=True, fecha__gte=timezone.localdate())
+
+    if not queryset.exists():
+        from io import StringIO
+        from django.core.management import call_command
+        call_command('generar_horarios', stdout=StringIO())
+        queryset = Horario.objects.filter(id_medico=medico, disponible=True, fecha__gte=timezone.localdate())
+
     fecha = request.query_params.get('fecha')
     if fecha:
         queryset = queryset.filter(fecha=fecha)
@@ -52,18 +60,21 @@ def disponibilidad_create(request, medico_pk):
     created = []
     errors = []
 
+    # Cargar horarios existentes una vez para evitar N queries de overlap
+    existentes = list(Horario.objects.filter(
+        id_medico=medico, fecha=fecha_val
+    ).values_list('hora_inicio', 'hora_fin'))
+
     current = start
     while current + timedelta(minutes=duracion) <= end:
         slot_inicio = current.time()
         slot_fin = (current + timedelta(minutes=duracion)).time()
 
-        # Validar overlap
-        overlap = Horario.objects.filter(
-            id_medico=medico,
-            fecha=fecha_val,
-            hora_inicio__lt=slot_fin,
-            hora_fin__gt=slot_inicio,
-        ).exists()
+        # Validar overlap en memoria
+        overlap = any(
+            e_inicio < slot_fin and e_fin > slot_inicio
+            for e_inicio, e_fin in existentes
+        )
 
         if overlap:
             errors.append(f'Slot {slot_inicio}-{slot_fin} se superpone con otro horario')
@@ -87,7 +98,7 @@ def disponibilidad_create(request, medico_pk):
 @api_view(['PUT', 'DELETE'])
 def disponibilidad_detail(request, medico_pk, pk):
     try:
-        horario = Horario.objects.get(pk=pk, id_medico_id=medico_pk)
+        horario = Horario.objects.select_related('id_medico').get(pk=pk, id_medico_id=medico_pk)
     except Horario.DoesNotExist:
         return Response({'error': 'Horario no encontrado'}, status=status.HTTP_404_NOT_FOUND)
 

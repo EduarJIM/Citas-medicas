@@ -27,10 +27,8 @@ class TestUserRegistration:
         response = client.post('/api/auth/register/', USER_DATA, content_type='application/json')
         assert response.status_code == status.HTTP_201_CREATED
         body = response.json()
-        assert 'access' in body
-        assert 'refresh' in body
-        assert body['usuario']['correo'] == 'juan@example.com'
-        assert body['usuario']['nombre_completo'] == 'Juan Pérez'
+        assert 'mensaje' in body
+        assert 'Registro exitoso' in body['mensaje']
         assert Usuario.objects.filter(correo='juan@example.com').exists()
 
     def test_registration_missing_fields(self, client, seed_roles):
@@ -82,11 +80,24 @@ class TestUserRegistration:
 @pytest.mark.django_db
 class TestUserLogin:
 
-    def _register(self, client):
-        client.post('/api/auth/register/', USER_DATA, content_type='application/json')
+    def _create_verified_user(self):
+        rol_paciente = Rol.objects.get(nombre='paciente')
+        usuario = Usuario.objects.create_user(
+            correo=USER_DATA['correo'],
+            password=USER_DATA['password'],
+            nombre_completo=USER_DATA['nombre_completo'],
+            documento=USER_DATA['documento'],
+            telefono=USER_DATA['telefono'],
+            id_rol=rol_paciente,
+            email_verificado=True,
+            is_active=True,
+        )
+        from apps.users.models import Paciente
+        Paciente.objects.create(id_paciente=usuario)
+        return usuario
 
     def test_login_success(self, client, seed_roles):
-        self._register(client)
+        self._create_verified_user()
         response = client.post('/api/auth/login/', {
             'correo': 'juan@example.com',
             'password': 'Test1234!',
@@ -98,28 +109,29 @@ class TestUserLogin:
         assert body['usuario']['correo'] == 'juan@example.com'
 
     def test_login_invalid_credentials(self, client, seed_roles):
-        self._register(client)
+        self._create_verified_user()
         response = client.post('/api/auth/login/', {
             'correo': 'juan@example.com',
             'password': 'WrongPass1!',
         }, content_type='application/json')
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
-        assert 'Credenciales inválidas' in str(response.json().get('error', ''))
+        assert 'Credenciales' in str(response.json().get('error', ''))
 
     def test_login_wrong_password_counts_attempts(self, client, seed_roles):
-        self._register(client)
-        for _ in range(3):
+        self._create_verified_user()
+        expected = [status.HTTP_401_UNAUTHORIZED, status.HTTP_401_UNAUTHORIZED, 423]
+        for i in range(3):
             response = client.post('/api/auth/login/', {
                 'correo': 'juan@example.com',
                 'password': 'WrongPass1!',
             }, content_type='application/json')
-            assert response.status_code == status.HTTP_401_UNAUTHORIZED
+            assert response.status_code == expected[i], f'Attempt {i+1}: expected {expected[i]} got {response.status_code}'
         user = Usuario.objects.get(correo='juan@example.com')
         assert user.intentos_fallidos == 3
         assert user.bloqueado_hasta is not None
 
     def test_login_blocked_after_three_failures(self, client, seed_roles):
-        self._register(client)
+        self._create_verified_user()
         for _ in range(3):
             client.post('/api/auth/login/', {
                 'correo': 'juan@example.com',
@@ -140,7 +152,7 @@ class TestUserLogin:
         assert response.status_code == status.HTTP_401_UNAUTHORIZED
 
     def test_login_resets_attempts_on_success(self, client, seed_roles):
-        self._register(client)
+        user = self._create_verified_user()
         client.post('/api/auth/login/', {
             'correo': 'juan@example.com', 'password': 'WrongPass1!',
         }, content_type='application/json')
